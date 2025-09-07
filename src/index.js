@@ -10,14 +10,15 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from './models/User.js'
-
+import cookie from 'cookie'
 
 configDotenv();
 
 const port=process.env.PORT || 3000;
 const app=express();
 app.use(cors({
-    origin:'https://chitchat-swart.vercel.app'
+    origin:process.env.CORS_URI,
+    credentials:true
 }));
 // app.use(cors(
 //     {
@@ -67,11 +68,10 @@ const authenticateToken = (req, res, next) => {
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ message: 'Access Denied: No Token Provided' });
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ message: 'Invalid Token' });
-        req.user = user;
+    const decoded=jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
         next();
-    });
+    
 };
 
 app.post('/signup', async (req, res) => {
@@ -106,27 +106,40 @@ app.post('/login', async (req, res) => {
         if (!validPassword) return res.status(400).json({ message: 'Invalid username or password' });
 
         const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-        res.json({ message: 'Logged in successfully' });
+        res.cookie('token', token, { httpOnly: true}); 
+        res.status(201).json({ message: 'Logged in successfully' ,
+        token: token
+        });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
 });
 
+
+
+app.post('/logout', (req, res) => {
+    res.clearCookie('token');
+    res.status(204).json({ message: 'Logged out successfully' });
+});
+
 app.get('/', authenticateToken, (req, res) => {
     res.send(`Server is working fine. Welcome ${req.user.username}`);
+
 });
 
 io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+    const cookies = cookie.parse(socket.handshake.headers.cookie || "");
+    const token = cookies.token;
     if (!token) {
         return next(new Error('Authentication error: No token provided'));
     }
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return next(new Error('Authentication error: Invalid token'));
-        socket.user = user;
-        next();
-    });
+    try{
+    const decoded=jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded;
+        next();}catch(err){
+            return next(new Error('Authentication error: Invalid token'));
+        }
+    
 });
 
 io.on("connection", (socket) => {
@@ -148,7 +161,7 @@ io.on("connection", (socket) => {
 
     socket.on('disconnect', () => {
         socket.broadcast.emit('left', { user: 'Admin', message: `${users[socket.id]} has left` });
-        console.log(`${users[socket.id]} has left`);
+        console.log(`${socket.user.username} has left`);
     });
 });
 
