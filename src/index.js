@@ -128,7 +128,7 @@ app.get('/', authenticateToken, (req, res) => {
 });
 
 io.use((socket, next) => {
-    const cookies = cookie.parse(socket.handshake.headers.cookie || "");
+    const cookies = cookie.parse(socket.handshake.headers.cookie || "");//unlike express we have to parse it manually in the socket.io to access the jwt token from cookies
     const token = cookies.token;
     if (!token) {
         return next(new Error('Authentication error: No token provided'));
