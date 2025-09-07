@@ -15,22 +15,24 @@ import User from './models/User.js'
 configDotenv();
 
 const port=process.env.PORT || 3000;
-const cors_uri=process.env.CORS_URI;
 const app=express();
-app.use(cors(
-    {
-        origin:function(origin,callback){//callback(error,allow)-->allow can be bool or string-->from the docs
-            if(!origin || cors_uri.includes(origin)){
-                callback(null,origin);//or callback(null,true)
-            }
-            else{
-                callback(new Error("cors denied"));
-            }
-        }
-        ,
-        credentials:true
-    }
-));
+app.use(cors({
+    origin:'https://chitchat-swart.vercel.app'
+}));
+// app.use(cors(
+//     {
+//         origin:function(origin,callback){//callback(error,allow)-->allow can be bool or string-->from the docs
+//             if(!origin || cors_uri.includes(origin)){
+//                 callback(null,origin);//or callback(null,true)
+//             }
+//             else{
+//                 callback(new Error("cors denied"));
+//             }
+//         }
+//         ,
+//         credentials:true
+//     }
+// ));
 
 mongoose.connect(process.env.MONGO_URI).then(() => {
     console.log('Connected to MongoDB');
