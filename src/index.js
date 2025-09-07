@@ -15,7 +15,7 @@ import User from './models/User.js'
 configDotenv();
 
 const port=process.env.PORT || 3000;
-const cors_uri=process.env.CORS_URI.split(',');
+const cors_uri=process.env.CORS_URI;
 const app=express();
 app.use(cors(
     {
